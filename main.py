@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import logging
+import os
+
 from celery.exceptions import TimeoutError as CeleryTimeoutError
 from celery.result import AsyncResult
 from fastapi import FastAPI, HTTPException
@@ -9,12 +12,39 @@ from celery_app import celery_app
 from schemas import ExecuteRequest, SubmitResponse, TaskResultResponse
 from tasks import run_code_task
 
+logger = logging.getLogger(__name__)
+
+
+def _parse_cors_origins() -> list[str]:
+    configured = os.getenv("CORS_ORIGINS", "")
+    origins = [origin.strip() for origin in configured.split(",") if origin.strip()]
+    if origins:
+        return origins
+    return [
+        "https://zencode-eta.vercel.app",
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+    ]
+
+
+def _enqueue_task(payload: dict):
+    try:
+        return run_code_task.delay(payload)
+    except Exception as exc:
+        logger.exception("Failed to enqueue task")
+        raise HTTPException(
+            status_code=503,
+            detail="Execution queue unavailable. Ensure Redis and Celery worker are running.",
+        ) from exc
+
+
 app = FastAPI(title="CodeZen Runner API", version="1.0.0")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=False,
+    allow_origins=_parse_cors_origins(),
+    allow_origin_regex=r"https://.*\.vercel\.app",
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -32,7 +62,7 @@ def health() -> dict[str, str]:
 
 @app.post("/submit", response_model=SubmitResponse)
 def submit_execution(request: ExecuteRequest) -> SubmitResponse:
-    task = run_code_task.delay(request.model_dump())
+    task = _enqueue_task(request.model_dump())
     if task.id is None:
         raise HTTPException(status_code=500, detail="Failed to create execution task.")
     return SubmitResponse(task_id=task.id, status="queued")
@@ -50,7 +80,7 @@ def get_result(task_id: str) -> TaskResultResponse:
 
 @app.post("/execute", response_model=TaskResultResponse)
 def execute_and_wait(request: ExecuteRequest) -> TaskResultResponse:
-    task = run_code_task.delay(request.model_dump())
+    task = _enqueue_task(request.model_dump())
     if task.id is None:
         raise HTTPException(status_code=500, detail="Failed to create execution task.")
 
