@@ -1,0 +1,4 @@
+fastapi==0.115.6
+uvicorn[standard]==0.32.1
+celery[redis]==5.4.0
+docker==7.1.0
