@@ -1,0 +1,288 @@
+openapi: 3.0.3
+info:
+  title: CodeZen Runner API
+  version: 1.0.0
+  description: |
+    FastAPI + Celery backend for queued code execution using Docker sandbox containers.
+servers:
+  - url: http://localhost:8000
+    description: Local development
+
+tags:
+  - name: System
+    description: Health and service status endpoints
+  - name: Execution
+    description: Code submission and result retrieval
+
+paths:
+  /:
+    get:
+      tags: [System]
+      summary: Root message
+      operationId: getRoot
+      responses:
+        '200':
+          description: Service greeting
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RootResponse'
+              example:
+                message: CodeZen FastAPI runner is up.
+
+  /health:
+    get:
+      tags: [System]
+      summary: Health check
+      operationId: getHealth
+      responses:
+        '200':
+          description: Service health status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+              example:
+                status: ok
+
+  /submit:
+    post:
+      tags: [Execution]
+      summary: Submit code execution job
+      operationId: submitExecution
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExecuteRequest'
+            example:
+              language: python
+              code: "print(input())"
+              stdin: "hello"
+              timeout_seconds: 5
+              wait_timeout: 20
+      responses:
+        '200':
+          description: Job accepted and queued
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubmitResponse'
+              example:
+                task_id: d4f2a1e8-4f6f-44f8-a46e-2e8a8f3767f5
+                status: queued
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '500':
+          description: Queue submission failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /result/{task_id}:
+    get:
+      tags: [Execution]
+      summary: Fetch execution result by task ID
+      operationId: getExecutionResult
+      parameters:
+        - in: path
+          name: task_id
+          required: true
+          schema:
+            type: string
+          description: Celery task identifier
+      responses:
+        '200':
+          description: Task status and optional result payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskResultResponse'
+              examples:
+                queued:
+                  summary: Task still in queue
+                  value:
+                    task_id: d4f2a1e8-4f6f-44f8-a46e-2e8a8f3767f5
+                    status: queued
+                completed:
+                  summary: Task completed with output
+                  value:
+                    task_id: d4f2a1e8-4f6f-44f8-a46e-2e8a8f3767f5
+                    status: completed
+                    result:
+                      stdout: hello
+                      stderr: ""
+                      exit_code: 0
+                      timed_out: false
+                      duration_ms: 42
+                failed:
+                  summary: Task failed
+                  value:
+                    task_id: d4f2a1e8-4f6f-44f8-a46e-2e8a8f3767f5
+                    status: failed
+                    error: Docker sandbox error: image not found
+
+  /execute:
+    post:
+      tags: [Execution]
+      summary: Submit and wait for execution result
+      operationId: executeAndWait
+      description: |
+        Creates a Celery task and waits for completion up to wait_timeout seconds.
+        If the timeout is reached, response status remains queued and the task can be polled via /result/{task_id}.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExecuteRequest'
+            example:
+              language: cpp
+              code: "#include <iostream>\nint main(){std::string s; std::getline(std::cin,s); std::cout<<s;}"
+              stdin: hello cpp
+              timeout_seconds: 5
+              wait_timeout: 20
+      responses:
+        '200':
+          description: Task completed or queued if wait timed out
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskResultResponse'
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '500':
+          description: Unexpected execution error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  schemas:
+    RootResponse:
+      type: object
+      required: [message]
+      properties:
+        message:
+          type: string
+
+    HealthResponse:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+
+    ExecuteRequest:
+      type: object
+      required: [language, code]
+      properties:
+        language:
+          type: string
+          description: Language identifier
+          enum: [python, javascript, java, c, cpp, js]
+        code:
+          type: string
+          minLength: 1
+          description: Source code to execute
+        stdin:
+          type: string
+          default: ''
+          description: Input passed to program standard input
+        timeout_seconds:
+          type: integer
+          minimum: 1
+          maximum: 30
+          default: 5
+          description: Sandbox process timeout in seconds
+        wait_timeout:
+          type: integer
+          minimum: 1
+          maximum: 120
+          default: 20
+          description: Time to block on /execute before returning queued status
+
+    ExecutionResult:
+      type: object
+      required: [stdout, stderr, exit_code, timed_out, duration_ms]
+      properties:
+        stdout:
+          type: string
+        stderr:
+          type: string
+        exit_code:
+          type: integer
+        timed_out:
+          type: boolean
+        duration_ms:
+          type: integer
+
+    SubmitResponse:
+      type: object
+      required: [task_id, status]
+      properties:
+        task_id:
+          type: string
+        status:
+          type: string
+          example: queued
+
+    TaskResultResponse:
+      type: object
+      required: [task_id, status]
+      properties:
+        task_id:
+          type: string
+        status:
+          type: string
+          example: completed
+        result:
+          allOf:
+            - $ref: '#/components/schemas/ExecutionResult'
+          nullable: true
+        error:
+          type: string
+          nullable: true
+
+    ErrorResponse:
+      type: object
+      required: [detail]
+      properties:
+        detail:
+          oneOf:
+            - type: string
+            - type: object
+
+    ValidationError:
+      type: object
+      required: [loc, msg, type]
+      properties:
+        loc:
+          type: array
+          items:
+            oneOf:
+              - type: string
+              - type: integer
+        msg:
+          type: string
+        type:
+          type: string
+
+    HTTPValidationError:
+      type: object
+      properties:
+        detail:
+          type: array
+          items:
+            $ref: '#/components/schemas/ValidationError'
