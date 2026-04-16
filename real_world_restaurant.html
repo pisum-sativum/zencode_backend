@@ -1,0 +1,1084 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CodeZen In Real Life - Restaurant Analogy</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=Fraunces:opsz,wght@9..144,500;9..144,700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg: #f6f8ef;
+        --ink: #1f2937;
+        --muted: #4b5563;
+        --card: #ffffff;
+        --line: #d6dcc8;
+        --brand: #b45309;
+        --brand-soft: #fde68a;
+        --teal: #0f766e;
+        --blue: #1d4ed8;
+        --violet: #6d28d9;
+        --danger: #b91c1c;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background:
+          radial-gradient(circle at 10% 10%, #fff6db 0%, transparent 35%),
+          radial-gradient(circle at 85% 15%, #d8f3ff 0%, transparent 30%),
+          linear-gradient(180deg, #fefce8 0%, var(--bg) 60%);
+        color: var(--ink);
+        font-family: "Space Grotesk", "Trebuchet MS", sans-serif;
+        line-height: 1.55;
+      }
+
+      .page {
+        width: min(1120px, 94%);
+        margin: 28px auto 48px;
+      }
+
+      .hero {
+        position: relative;
+        overflow: hidden;
+        border-radius: 20px;
+        padding: 28px;
+        color: #fff;
+        background: linear-gradient(
+          130deg,
+          #78350f 0%,
+          #b45309 45%,
+          #ea580c 100%
+        );
+        box-shadow: 0 18px 45px rgba(120, 53, 15, 0.25);
+        animation: floatIn 0.6s ease;
+      }
+
+      .hero::after {
+        content: "";
+        position: absolute;
+        right: -80px;
+        top: -80px;
+        width: 220px;
+        height: 220px;
+        background: rgba(255, 255, 255, 0.12);
+        border-radius: 50%;
+      }
+
+      .hero h1 {
+        margin: 0;
+        font-family: "Fraunces", Georgia, serif;
+        font-size: clamp(1.8rem, 2.8vw, 2.6rem);
+      }
+
+      .hero p {
+        margin: 12px 0 0;
+        max-width: 760px;
+        font-size: 1.04rem;
+      }
+
+      .chip-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 14px;
+      }
+
+      .chip {
+        border: 1px solid rgba(255, 255, 255, 0.35);
+        border-radius: 999px;
+        padding: 5px 11px;
+        font-size: 0.84rem;
+        background: rgba(0, 0, 0, 0.16);
+      }
+
+      .section {
+        margin-top: 18px;
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        background: var(--card);
+        box-shadow: 0 7px 20px rgba(28, 25, 23, 0.06);
+        padding: 20px;
+      }
+
+      h2 {
+        margin: 0 0 10px;
+        font-family: "Fraunces", Georgia, serif;
+        font-size: 1.45rem;
+      }
+
+      h3 {
+        margin: 16px 0 8px;
+        font-size: 1.08rem;
+      }
+
+      .muted {
+        color: var(--muted);
+      }
+
+      .mapping {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+        gap: 10px;
+      }
+
+      .map-card {
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: #f8faf6;
+        padding: 12px;
+      }
+
+      .map-card .title {
+        font-weight: 700;
+      }
+
+      .path-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 12px;
+      }
+
+      .flow-card {
+        border-radius: 12px;
+        border: 1px solid var(--line);
+        padding: 14px;
+      }
+
+      .flow-card.submit {
+        background: #eff6ff;
+        border-color: #bfdbfe;
+      }
+
+      .flow-card.execute {
+        background: #f0fdf4;
+        border-color: #bbf7d0;
+      }
+
+      .steps {
+        margin: 8px 0 0;
+        padding-left: 20px;
+      }
+
+      .steps li {
+        margin-bottom: 8px;
+      }
+
+      #graph-wrap {
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        overflow: hidden;
+      }
+
+      #graph {
+        width: 100%;
+        height: 460px;
+        background: #fcfdf8;
+      }
+
+      .legend {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        padding: 10px;
+        border-top: 1px solid var(--line);
+        background: #f8faf6;
+      }
+
+      .dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        display: inline-block;
+        margin-right: 6px;
+      }
+
+      .node-detail {
+        margin-top: 10px;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: #fffdf5;
+        padding: 12px;
+      }
+
+      .table-scroll {
+        overflow-x: auto;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.95rem;
+      }
+
+      th,
+      td {
+        border: 1px solid var(--line);
+        padding: 9px;
+        text-align: left;
+        vertical-align: top;
+      }
+
+      th {
+        background: #fff8e6;
+      }
+
+      .callout {
+        border-left: 4px solid var(--brand);
+        background: #fffbeb;
+        padding: 10px 12px;
+        border-radius: 8px;
+      }
+
+      code {
+        border: 1px solid #e5e7eb;
+        border-radius: 6px;
+        padding: 1px 6px;
+        background: #f9fafb;
+        font-family: "Consolas", "Courier New", monospace;
+      }
+
+      .terms {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 10px;
+      }
+
+      .term {
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 10px;
+        background: #fafaf9;
+      }
+
+      .term strong {
+        display: block;
+        margin-bottom: 4px;
+      }
+
+      .footer-note {
+        margin-top: 16px;
+        color: var(--muted);
+        font-size: 0.9rem;
+      }
+
+      @keyframes floatIn {
+        from {
+          opacity: 0;
+          transform: translateY(14px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      @media (max-width: 700px) {
+        .section {
+          padding: 16px;
+        }
+
+        #graph {
+          height: 420px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <header class="hero">
+        <h1>CodeZen Explained as a Real Restaurant</h1>
+        <p>
+          Imagine this backend as a modern restaurant where customers place food
+          orders. The server takes orders quickly, the kitchen processes them in
+          sequence, and each dish is cooked in its own safe station. This page
+          maps every file, dependency, and data flow to that real-life process
+          in depth.
+        </p>
+        <div class="chip-row">
+          <span class="chip">No Mermaid Used</span>
+          <span class="chip">Uses Cytoscape.js</span>
+          <span class="chip">Complete File Coverage</span>
+          <span class="chip">Beginner + Deep Dive</span>
+        </div>
+      </header>
+
+      <section class="section">
+        <h2>1) Real-Life Mapping</h2>
+        <p class="muted">
+          Each backend piece has a restaurant equivalent. Once this mapping is
+          clear, the architecture becomes easy.
+        </p>
+        <div class="mapping">
+          <article class="map-card">
+            <div class="title">Customer Counter</div>
+            <div><strong>File:</strong> <code>main.py</code></div>
+            <div>
+              Accepts requests, validates process path, gives ticket IDs.
+            </div>
+          </article>
+          <article class="map-card">
+            <div class="title">Menu Rules Book</div>
+            <div><strong>File:</strong> <code>schemas.py</code></div>
+            <div>Defines valid order format and rejects invalid entries.</div>
+          </article>
+          <article class="map-card">
+            <div class="title">Order Conveyor</div>
+            <div><strong>File:</strong> <code>celery_app.py</code> + Redis</div>
+            <div>Moves tickets from counter to kitchen workers.</div>
+          </article>
+          <article class="map-card">
+            <div class="title">Kitchen Ticket Handler</div>
+            <div><strong>File:</strong> <code>tasks.py</code></div>
+            <div>
+              Picks a ticket and forwards it to the correct cooking station.
+            </div>
+          </article>
+          <article class="map-card">
+            <div class="title">Cooking Station</div>
+            <div><strong>File:</strong> <code>executor.py</code></div>
+            <div>Runs code in isolated container and returns output.</div>
+          </article>
+          <article class="map-card">
+            <div class="title">Restaurant Building</div>
+            <div><strong>Files:</strong> Docker and compose files</div>
+            <div>Creates and wires all services so the system can run.</div>
+          </article>
+        </div>
+      </section>
+
+      <section class="section">
+        <h2>2) Interactive Dependency Graph (Cytoscape)</h2>
+        <p class="muted">
+          Click a node to see what it does, who calls it, and why it matters.
+          Colors indicate file groups.
+        </p>
+        <div id="graph-wrap">
+          <div id="graph"></div>
+          <div class="legend">
+            <span
+              ><i class="dot" style="background: #1d4ed8"></i>API and
+              contracts</span
+            >
+            <span
+              ><i class="dot" style="background: #0f766e"></i>Queue and
+              execution</span
+            >
+            <span
+              ><i class="dot" style="background: #6d28d9"></i
+              >Infrastructure</span
+            >
+            <span
+              ><i class="dot" style="background: #b45309"></i>Docs and
+              utilities</span
+            >
+          </div>
+        </div>
+        <div class="node-detail" id="node-detail">
+          Select a node in the graph to see detailed explanation.
+        </div>
+      </section>
+
+      <section class="section">
+        <h2>3) Request Flows As Real Restaurant Scenarios</h2>
+        <div class="path-grid">
+          <article class="flow-card submit">
+            <h3>
+              Flow A: Quick Ticket + Track Later (<code>/submit</code> +
+              <code>/result</code>)
+            </h3>
+            <ol class="steps">
+              <li>
+                Customer places an order at counter: POST goes to
+                <code>main.py</code>.
+              </li>
+              <li>Counter checks menu rules in <code>schemas.py</code>.</li>
+              <li>
+                Counter puts a kitchen ticket on conveyor via
+                <code>run_code_task.delay(...)</code>.
+              </li>
+              <li>Customer gets a ticket ID immediately (fast response).</li>
+              <li>
+                Kitchen worker in <code>tasks.py</code> picks ticket from Redis
+                queue.
+              </li>
+              <li>
+                Worker sends order to station in <code>executor.py</code>.
+              </li>
+              <li>
+                Station runs code in temporary sandbox container and captures
+                output.
+              </li>
+              <li>Result stored in Redis backend.</li>
+              <li>
+                Customer asks status with <code>/result/{task_id}</code> and
+                gets queued or completed info.
+              </li>
+            </ol>
+          </article>
+
+          <article class="flow-card execute">
+            <h3>
+              Flow B: Place Order and Wait at Counter (<code>/execute</code>)
+            </h3>
+            <ol class="steps">
+              <li>Customer places order and asks to wait for result now.</li>
+              <li><code>main.py</code> still queues the task using Celery.</li>
+              <li>Counter waits up to <code>wait_timeout</code> seconds.</li>
+              <li>
+                If ready in time, full result is returned in one response.
+              </li>
+              <li>
+                If not ready, status stays queued and customer can track later
+                with ticket ID.
+              </li>
+            </ol>
+          </article>
+        </div>
+      </section>
+
+      <section class="section">
+        <h2>4) Deep-Dive Coverage for Every Important File</h2>
+        <div class="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>File</th>
+                <th>Main Responsibility</th>
+                <th>Key Functions or Objects</th>
+                <th>Depends On</th>
+                <th>Used By</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>main.py</code></td>
+                <td>HTTP entry layer. Handles routes and client responses.</td>
+                <td>
+                  <code>root()</code>, <code>health()</code>,
+                  <code>submit_execution()</code>, <code>get_result()</code>,
+                  <code>execute_and_wait()</code>
+                </td>
+                <td>
+                  <code>schemas.py</code>, <code>tasks.py</code>,
+                  <code>celery_app.py</code>
+                </td>
+                <td>Frontend or API clients</td>
+              </tr>
+              <tr>
+                <td><code>schemas.py</code></td>
+                <td>
+                  Defines request and response contracts and validation rules.
+                </td>
+                <td>
+                  <code>ExecuteRequest</code>, <code>ExecutionResult</code>,
+                  <code>SubmitResponse</code>, <code>TaskResultResponse</code>,
+                  <code>validate_language()</code>
+                </td>
+                <td>Pydantic</td>
+                <td><code>main.py</code></td>
+              </tr>
+              <tr>
+                <td><code>celery_app.py</code></td>
+                <td>Creates Celery app and queue/backend config.</td>
+                <td>
+                  <code>celery_app = Celery(...)</code>,
+                  <code>celery_app.conf.update(...)</code>
+                </td>
+                <td>Redis URL env variable</td>
+                <td><code>main.py</code>, <code>tasks.py</code></td>
+              </tr>
+              <tr>
+                <td><code>tasks.py</code></td>
+                <td>
+                  Background job adapter between queue and execution engine.
+                </td>
+                <td>
+                  <code>@celery_app.task</code>,
+                  <code>run_code_task(payload)</code>
+                </td>
+                <td><code>celery_app.py</code>, <code>executor.py</code></td>
+                <td>Celery worker process</td>
+              </tr>
+              <tr>
+                <td><code>executor.py</code></td>
+                <td>Sandboxed code execution and result shaping.</td>
+                <td>
+                  <code>execute_code()</code>,
+                  <code>normalize_language()</code>,
+                  <code>_build_archive()</code>, <code>_collect_logs()</code>,
+                  <code>_truncate_output()</code>
+                </td>
+                <td>Docker SDK, Docker daemon, sandbox image</td>
+                <td><code>tasks.py</code></td>
+              </tr>
+              <tr>
+                <td><code>docker-compose.yml</code></td>
+                <td>
+                  Orchestrates <code>redis</code>, <code>api</code>, and
+                  <code>worker</code> services.
+                </td>
+                <td>Service definitions, environment wiring, volumes, ports</td>
+                <td>Docker compose runtime</td>
+                <td>Startup scripts and developer</td>
+              </tr>
+              <tr>
+                <td><code>Dockerfile</code></td>
+                <td>Build image for API and worker app runtime.</td>
+                <td>
+                  Python base image, dependency install, app copy, uvicorn
+                  command
+                </td>
+                <td><code>requirements.txt</code></td>
+                <td>Compose api and worker services</td>
+              </tr>
+              <tr>
+                <td><code>Dockerfile.sandbox</code></td>
+                <td>
+                  Build isolated execution image with compilers/interpreters.
+                </td>
+                <td>
+                  Installs build-essential, JDK, nodejs, python runtime tools
+                </td>
+                <td>apt packages and Docker build</td>
+                <td><code>executor.py</code> generated containers</td>
+              </tr>
+              <tr>
+                <td><code>requirements.txt</code></td>
+                <td>Pins Python dependencies for stable setup.</td>
+                <td>FastAPI, Uvicorn, Celery with Redis, Docker SDK</td>
+                <td>pip install</td>
+                <td><code>Dockerfile</code></td>
+              </tr>
+              <tr>
+                <td><code>openapi.yaml</code></td>
+                <td>API contract document for consumers and tooling.</td>
+                <td>Path docs, schema docs, examples, responses</td>
+                <td>OpenAPI 3 spec format</td>
+                <td>Developers, frontend, testers</td>
+              </tr>
+              <tr>
+                <td><code>run.sh</code> and <code>run.ps1</code></td>
+                <td>Bootstraps full stack with one command.</td>
+                <td>Build sandbox image, then run compose with build</td>
+                <td>Docker CLI</td>
+                <td>Developers</td>
+              </tr>
+              <tr>
+                <td><code>README.md</code></td>
+                <td>Entry documentation and quick-start reference.</td>
+                <td>Supported languages, run steps, endpoint examples</td>
+                <td>None</td>
+                <td>All contributors</td>
+              </tr>
+              <tr>
+                <td>
+                  <code>project_guide.html</code> and
+                  <code>file_dependency.html</code>
+                </td>
+                <td>Architecture education documents.</td>
+                <td>Visual explanations and terminology references</td>
+                <td>Browser</td>
+                <td>Onboarding and review sessions</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="section">
+        <h2>5) Deep Focus: What Exactly Happens Inside executor.py</h2>
+        <p>
+          In the analogy, this is the secure cooking booth where one dish is
+          prepared in isolation.
+        </p>
+        <ol class="steps">
+          <li>Normalize language input (example: js becomes javascript).</li>
+          <li>Select command and source filename from language config.</li>
+          <li>
+            Create a Docker client and isolated container with strict limits:
+          </li>
+          <li class="callout">
+            Memory limit 256m, CPU cap, process limit, no network,
+            no-new-privileges, non-root user.
+          </li>
+          <li>Package source code and stdin file into tar archive.</li>
+          <li>Copy archive into container sandbox directory.</li>
+          <li>Start container and wait for completion up to timeout.</li>
+          <li>If timeout happens, kill container and mark timed_out true.</li>
+          <li>Collect stdout and stderr logs from container.</li>
+          <li>Truncate very large outputs to prevent huge payload response.</li>
+          <li>
+            Remove container forcefully and close Docker client in final cleanup
+            block.
+          </li>
+          <li>
+            Return structured result object: stdout, stderr, exit_code,
+            timed_out, duration_ms.
+          </li>
+        </ol>
+      </section>
+
+      <section class="section">
+        <h2>6) Error and Edge Case Coverage</h2>
+        <div class="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>Situation</th>
+                <th>Where Handled</th>
+                <th>What User Sees</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Unsupported language</td>
+                <td><code>schemas.py</code> validate_language</td>
+                <td>Validation error with supported values list</td>
+              </tr>
+              <tr>
+                <td>Task creation failure</td>
+                <td><code>main.py</code> submit or execute routes</td>
+                <td>HTTP 500 with failure detail</td>
+              </tr>
+              <tr>
+                <td>Long-running code</td>
+                <td><code>executor.py</code> timeout branch</td>
+                <td>
+                  timed_out true, exit_code 124, timeout message in stderr
+                </td>
+              </tr>
+              <tr>
+                <td>Docker runtime error</td>
+                <td>
+                  <code>executor.py</code> APIError or DockerException catch
+                </td>
+                <td>stderr starts with Docker sandbox error</td>
+              </tr>
+              <tr>
+                <td>Result not ready yet</td>
+                <td>
+                  <code>main.py</code> /result and /execute timeout handling
+                </td>
+                <td>Status stays queued or running</td>
+              </tr>
+              <tr>
+                <td>Huge output spam</td>
+                <td><code>executor.py</code> _truncate_output</td>
+                <td>Output clipped with output truncated marker</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="section">
+        <h2>7) Terminology Glossary in Plain Language</h2>
+        <div class="terms">
+          <div class="term">
+            <strong>Task</strong>One unit of background work executed by Celery
+            worker.
+          </div>
+          <div class="term">
+            <strong>Queue</strong>Waiting line where tasks sit before workers
+            pick them.
+          </div>
+          <div class="term">
+            <strong>Broker</strong>Message transport service. Here it is Redis.
+          </div>
+          <div class="term">
+            <strong>Result backend</strong>Storage where completed task states
+            and outputs are kept.
+          </div>
+          <div class="term">
+            <strong>Worker</strong>Background process that executes queued
+            tasks.
+          </div>
+          <div class="term">
+            <strong>Sandbox</strong>Isolated container that runs untrusted user
+            code safely.
+          </div>
+          <div class="term">
+            <strong>stdin</strong>Input stream fed to the user program.
+          </div>
+          <div class="term">
+            <strong>stdout</strong>Normal printed output from program.
+          </div>
+          <div class="term">
+            <strong>stderr</strong>Error output from program or runtime.
+          </div>
+          <div class="term">
+            <strong>Exit code</strong>Numeric process status where 0 usually
+            means success.
+          </div>
+          <div class="term">
+            <strong>Serialization</strong>Converting payload to JSON for queue
+            transport.
+          </div>
+          <div class="term">
+            <strong>Orchestration</strong>Starting and linking multiple services
+            together.
+          </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <h2>8) Practical Debug Order (When Something Breaks)</h2>
+        <ol class="steps">
+          <li>Check API route behavior in <code>main.py</code> first.</li>
+          <li>Verify input schema assumptions in <code>schemas.py</code>.</li>
+          <li>
+            Confirm queue setup and Redis URL in <code>celery_app.py</code>.
+          </li>
+          <li>Check worker task mapping in <code>tasks.py</code>.</li>
+          <li>
+            Inspect Docker availability and sandbox image for
+            <code>executor.py</code>.
+          </li>
+          <li>
+            Validate service wiring and Docker socket mount in
+            <code>docker-compose.yml</code>.
+          </li>
+          <li>
+            Rebuild images if dependency mismatch appears in
+            <code>requirements.txt</code> or Dockerfiles.
+          </li>
+        </ol>
+        <p class="footer-note">
+          This page intentionally explains both beginner view and engineering
+          depth so new members can onboard quickly while senior members can
+          verify real control flow.
+        </p>
+      </section>
+    </main>
+
+    <script src="https://unpkg.com/cytoscape@3.30.2/dist/cytoscape.min.js"></script>
+    <script>
+      const nodeData = {
+        main: {
+          name: "main.py",
+          detail:
+            "API entry layer. Defines /, /health, /submit, /result/{task_id}, /execute. It validates and dispatches jobs using Celery.",
+        },
+        schemas: {
+          name: "schemas.py",
+          detail:
+            "Data contract layer. Pydantic models validate language, code, timeout bounds, and response shapes.",
+        },
+        celery: {
+          name: "celery_app.py",
+          detail:
+            "Queue configuration layer. Creates celery_app with Redis as broker and result backend, plus worker behavior settings.",
+        },
+        tasks: {
+          name: "tasks.py",
+          detail:
+            "Worker-facing task adapter. run_code_task reads payload and calls execute_code in executor.py.",
+        },
+        executor: {
+          name: "executor.py",
+          detail:
+            "Sandbox engine. Creates isolated containers, copies source/input, executes command, collects logs, handles timeout, returns output.",
+        },
+        compose: {
+          name: "docker-compose.yml",
+          detail:
+            "Service wiring. Starts redis, api, and worker services with env vars and docker socket mount.",
+        },
+        dockerfile: {
+          name: "Dockerfile",
+          detail:
+            "Runtime image for API and worker. Installs requirements and launches Uvicorn by default.",
+        },
+        sandbox: {
+          name: "Dockerfile.sandbox",
+          detail:
+            "Execution image. Installs toolchain for Python, Node.js, Java, C, and C++.",
+        },
+        req: {
+          name: "requirements.txt",
+          detail:
+            "Dependency pin list for FastAPI, Uvicorn, Celery with Redis, and Docker SDK.",
+        },
+        redis: {
+          name: "Redis Service",
+          detail:
+            "Acts as broker and result backend. It carries queued task messages and stores task results.",
+        },
+        openapi: {
+          name: "openapi.yaml",
+          detail:
+            "Formal API contract. Documents routes, models, examples, and response behavior.",
+        },
+        scripts: {
+          name: "run.sh / run.ps1",
+          detail:
+            "One-command bootstrap scripts that build sandbox image and start compose stack.",
+        },
+        readme: {
+          name: "README.md",
+          detail:
+            "Project landing doc with startup instructions and quick endpoint examples.",
+        },
+      };
+
+      const cy = cytoscape({
+        container: document.getElementById("graph"),
+        elements: [
+          { data: { id: "main", label: "main.py", group: "api" } },
+          { data: { id: "schemas", label: "schemas.py", group: "api" } },
+          { data: { id: "celery", label: "celery_app.py", group: "exec" } },
+          { data: { id: "tasks", label: "tasks.py", group: "exec" } },
+          { data: { id: "executor", label: "executor.py", group: "exec" } },
+          { data: { id: "redis", label: "redis", group: "infra" } },
+          {
+            data: {
+              id: "compose",
+              label: "docker-compose.yml",
+              group: "infra",
+            },
+          },
+          { data: { id: "dockerfile", label: "Dockerfile", group: "infra" } },
+          {
+            data: {
+              id: "sandbox",
+              label: "Dockerfile.sandbox",
+              group: "infra",
+            },
+          },
+          { data: { id: "req", label: "requirements.txt", group: "docs" } },
+          { data: { id: "openapi", label: "openapi.yaml", group: "docs" } },
+          { data: { id: "scripts", label: "run scripts", group: "docs" } },
+          { data: { id: "readme", label: "README.md", group: "docs" } },
+
+          {
+            data: {
+              id: "e1",
+              source: "main",
+              target: "schemas",
+              label: "imports models",
+            },
+          },
+          {
+            data: {
+              id: "e2",
+              source: "main",
+              target: "tasks",
+              label: "dispatches task",
+            },
+          },
+          {
+            data: {
+              id: "e3",
+              source: "main",
+              target: "celery",
+              label: "reads AsyncResult",
+            },
+          },
+          {
+            data: {
+              id: "e4",
+              source: "tasks",
+              target: "celery",
+              label: "registers task",
+            },
+          },
+          {
+            data: {
+              id: "e5",
+              source: "tasks",
+              target: "executor",
+              label: "calls execute_code",
+            },
+          },
+          {
+            data: {
+              id: "e6",
+              source: "celery",
+              target: "redis",
+              label: "broker/backend",
+            },
+          },
+          {
+            data: {
+              id: "e7",
+              source: "compose",
+              target: "redis",
+              label: "starts service",
+            },
+          },
+          {
+            data: {
+              id: "e8",
+              source: "compose",
+              target: "main",
+              label: "runs api container",
+            },
+          },
+          {
+            data: {
+              id: "e9",
+              source: "compose",
+              target: "tasks",
+              label: "runs worker container",
+            },
+          },
+          {
+            data: {
+              id: "e10",
+              source: "dockerfile",
+              target: "req",
+              label: "installs deps",
+            },
+          },
+          {
+            data: {
+              id: "e11",
+              source: "executor",
+              target: "sandbox",
+              label: "uses image",
+            },
+          },
+          {
+            data: {
+              id: "e12",
+              source: "scripts",
+              target: "compose",
+              label: "boots stack",
+            },
+          },
+          {
+            data: {
+              id: "e13",
+              source: "scripts",
+              target: "sandbox",
+              label: "builds image",
+            },
+          },
+          {
+            data: {
+              id: "e14",
+              source: "readme",
+              target: "scripts",
+              label: "documents usage",
+            },
+          },
+          {
+            data: {
+              id: "e15",
+              source: "openapi",
+              target: "main",
+              label: "documents routes",
+            },
+          },
+        ],
+        style: [
+          {
+            selector: "node",
+            style: {
+              "background-color": "#374151",
+              label: "data(label)",
+              color: "#111827",
+              "font-size": 11,
+              "text-background-color": "#ffffff",
+              "text-background-opacity": 0.95,
+              "text-background-padding": 3,
+              "text-background-shape": "round-rectangle",
+              "text-wrap": "wrap",
+              "text-max-width": 95,
+              width: 46,
+              height: 46,
+              "border-width": 2,
+              "border-color": "#ffffff",
+            },
+          },
+          {
+            selector: 'node[group = "api"]',
+            style: {
+              "background-color": "#1d4ed8",
+            },
+          },
+          {
+            selector: 'node[group = "exec"]',
+            style: {
+              "background-color": "#0f766e",
+            },
+          },
+          {
+            selector: 'node[group = "infra"]',
+            style: {
+              "background-color": "#6d28d9",
+            },
+          },
+          {
+            selector: 'node[group = "docs"]',
+            style: {
+              "background-color": "#b45309",
+            },
+          },
+          {
+            selector: "edge",
+            style: {
+              width: 2,
+              "line-color": "#64748b",
+              "target-arrow-color": "#64748b",
+              "target-arrow-shape": "triangle",
+              "curve-style": "bezier",
+              "arrow-scale": 0.85,
+              label: "data(label)",
+              "font-size": 8,
+              color: "#334155",
+              "text-background-color": "#ffffff",
+              "text-background-opacity": 0.9,
+              "text-background-padding": 2,
+            },
+          },
+          {
+            selector: "node:selected",
+            style: {
+              "border-color": "#111827",
+              "border-width": 4,
+            },
+          },
+        ],
+        layout: {
+          name: "cose",
+          animate: true,
+          animationDuration: 600,
+          fit: true,
+          padding: 28,
+        },
+      });
+
+      const detail = document.getElementById("node-detail");
+
+      function setDetail(id) {
+        const info = nodeData[id];
+        if (!info) {
+          detail.textContent =
+            "Select a node in the graph to see detailed explanation.";
+          return;
+        }
+        detail.innerHTML =
+          "<strong>" + info.name + "</strong><br />" + info.detail;
+      }
+
+      cy.on("tap", "node", (evt) => {
+        setDetail(evt.target.id());
+      });
+
+      cy.on("tap", (evt) => {
+        if (evt.target === cy) {
+          setDetail(null);
+        }
+      });
+    </script>
+  </body>
+</html>

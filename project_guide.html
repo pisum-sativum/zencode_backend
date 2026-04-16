@@ -1,0 +1,462 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CodeZen Backend Guide</title>
+    <style>
+      :root {
+        --bg: #f4f7fb;
+        --card: #ffffff;
+        --ink: #1f2a37;
+        --muted: #5b6573;
+        --accent: #0f766e;
+        --accent-soft: #d1fae5;
+        --line: #d9e2ec;
+        --mono-bg: #f8fafc;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        background: radial-gradient(
+          circle at top left,
+          #e0f2fe 0%,
+          var(--bg) 35%,
+          #eef2ff 100%
+        );
+        color: var(--ink);
+        line-height: 1.55;
+      }
+
+      .page {
+        max-width: 1100px;
+        margin: 0 auto;
+        padding: 28px 16px 56px;
+      }
+
+      .hero {
+        background: linear-gradient(145deg, #0f766e 0%, #155e75 100%);
+        color: #ffffff;
+        border-radius: 16px;
+        padding: 22px;
+        box-shadow: 0 10px 24px rgba(15, 118, 110, 0.2);
+      }
+
+      .hero h1 {
+        margin: 0 0 8px;
+        font-size: 1.8rem;
+      }
+
+      .hero p {
+        margin: 0;
+        opacity: 0.95;
+      }
+
+      section {
+        margin-top: 18px;
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        padding: 16px;
+        box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05);
+      }
+
+      h2 {
+        margin: 0 0 10px;
+        font-size: 1.25rem;
+        color: #0f172a;
+      }
+
+      h3 {
+        margin-top: 16px;
+        margin-bottom: 8px;
+        color: #0b4f4b;
+        font-size: 1.05rem;
+      }
+
+      .pill {
+        display: inline-block;
+        background: var(--accent-soft);
+        color: #065f46;
+        border-radius: 999px;
+        padding: 3px 10px;
+        font-size: 0.8rem;
+        margin-right: 8px;
+        margin-bottom: 8px;
+        border: 1px solid #a7f3d0;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+        gap: 12px;
+      }
+
+      .card {
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 12px;
+        background: #fcfdff;
+      }
+
+      .card strong {
+        color: #0f172a;
+      }
+
+      .term {
+        border-left: 4px solid var(--accent);
+        padding: 8px 10px;
+        background: #f0fdfa;
+        margin-bottom: 10px;
+        border-radius: 8px;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.95rem;
+      }
+
+      th,
+      td {
+        border: 1px solid var(--line);
+        text-align: left;
+        padding: 8px;
+        vertical-align: top;
+      }
+
+      th {
+        background: #f8fafc;
+      }
+
+      code {
+        font-family: Consolas, "Courier New", monospace;
+        background: var(--mono-bg);
+        border: 1px solid #e2e8f0;
+        border-radius: 6px;
+        padding: 1px 5px;
+      }
+
+      .mermaid {
+        background: #f8fafc;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 10px;
+        overflow-x: auto;
+      }
+
+      .note {
+        padding: 10px;
+        border-radius: 8px;
+        background: #fff7ed;
+        border: 1px solid #fed7aa;
+        color: #9a3412;
+        font-size: 0.95rem;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <header class="hero">
+        <h1>CodeZen Backend Guide (Beginner Friendly)</h1>
+        <p>
+          This document explains how every part is connected: FastAPI endpoints,
+          Celery queue, Redis, Docker sandbox, file dependencies, and key
+          functions.
+        </p>
+      </header>
+
+      <section>
+        <h2>1) Project Snapshot</h2>
+        <span class="pill">FastAPI</span>
+        <span class="pill">Celery</span>
+        <span class="pill">Redis</span>
+        <span class="pill">Docker Sandbox</span>
+        <span class="pill">Multi-language Execution</span>
+        <p>
+          User submits source code and input to the API. API puts the job into
+          Celery queue. Worker takes job, runs it inside isolated Docker
+          container, and stores result. Client gets output using task ID.
+        </p>
+      </section>
+
+      <section>
+        <h2>2) Core Terminologies</h2>
+        <div class="term">
+          <strong>Task:</strong> A background job. Here,
+          <code>run_code_task</code> is the task.
+        </div>
+        <div class="term">
+          <strong>Queue:</strong> Waiting line of jobs that workers process.
+        </div>
+        <div class="term">
+          <strong>Broker:</strong> Message hub that carries tasks from API to
+          workers. Here, Redis.
+        </div>
+        <div class="term">
+          <strong>Result Backend:</strong> Place where task result is stored.
+          Here, Redis.
+        </div>
+        <div class="term">
+          <strong>Worker:</strong> Celery process that executes queued tasks.
+        </div>
+        <div class="term">
+          <strong>Sandbox:</strong> Controlled container where user code runs
+          with limits.
+        </div>
+        <div class="term">
+          <strong>Timeout:</strong> Max run time. If exceeded, code is killed.
+        </div>
+        <div class="term">
+          <strong>Stdout/Stderr:</strong> Normal output / error output from
+          program.
+        </div>
+        <div class="term">
+          <strong>Exit Code:</strong> Process result code. 0 means success.
+        </div>
+      </section>
+
+      <section>
+        <h2>3) High-Level System Connection</h2>
+        <pre class="mermaid">
+flowchart LR
+    U[Client / Frontend] -->|HTTP JSON| A[FastAPI Service\nmain.py]
+    A -->|Enqueue task| R[(Redis\nBroker + Result Backend)]
+    W[Celery Worker\ntasks.py] -->|Consume task| R
+    W -->|calls| E[Execution Engine\nexecutor.py]
+    E -->|Create ephemeral container| D[(Docker Daemon)]
+    D --> S[Sandbox Container\nPython/JS/Java/C/C++]
+    S -->|stdout, stderr, exit code| E
+    E -->|Store task result| R
+    A -->|Read status/result| R
+    A -->|Response JSON| U
+        </pre>
+      </section>
+
+      <section>
+        <h2>4) File Dependency Graph</h2>
+        <pre class="mermaid">
+graph TD
+    M[main.py] --> C[celery_app.py]
+    M --> S[schemas.py]
+    M --> T[tasks.py]
+    T --> C
+    T --> E[executor.py]
+    E --> DI[docker python sdk]
+    C --> CE[Celery library]
+    C --> RE[Redis URL env]
+    DC[docker-compose.yml] --> API[api service]
+    DC --> WK[worker service]
+    DC --> RD[redis service]
+    API --> M
+    WK --> T
+    SB[Dockerfile.sandbox] --> IMG[codezen-sandbox image]
+    E --> IMG
+        </pre>
+      </section>
+
+      <section>
+        <h2>5) Request Flows</h2>
+
+        <h3>5.1 Submit + Poll Flow</h3>
+        <pre class="mermaid">
+sequenceDiagram
+    participant Client
+    participant API as FastAPI main.py
+    participant Redis as Redis Broker/Backend
+    participant Worker as Celery Worker
+    participant Exec as executor.py
+    participant Docker as Docker Sandbox
+
+    Client->>API: POST /submit {language, code, stdin}
+    API->>Redis: run_code_task.delay(payload)
+    API-->>Client: {task_id, status: queued}
+
+    Worker->>Redis: consume queued task
+    Worker->>Exec: execute_code(...)
+    Exec->>Docker: create/run sandbox container
+    Docker-->>Exec: output logs + status
+    Exec-->>Worker: result dict
+    Worker->>Redis: store result
+
+    Client->>API: GET /result/{task_id}
+    API->>Redis: fetch AsyncResult(task_id)
+    API-->>Client: queued/running/completed/failed
+        </pre>
+
+        <h3>5.2 Execute-And-Wait Flow</h3>
+        <pre class="mermaid">
+flowchart TD
+    A[POST /execute] --> B[Validate body via ExecuteRequest]
+    B --> C[Queue run_code_task]
+    C --> D{Result within wait_timeout?}
+    D -- Yes --> E[Return completed + result]
+    D -- No --> F[Return queued + task_id]
+    F --> G[Client polls /result/task_id]
+        </pre>
+      </section>
+
+      <section>
+        <h2>6) Executor Internal Flow</h2>
+        <pre class="mermaid">
+flowchart TD
+      A[Start execute code] --> B[Normalize language]
+      B --> C{Language supported}
+      C -- No --> Z[Return unsupported language error]
+      C -- Yes --> D[Load language config]
+      D --> E[Create Docker client]
+      E --> F[Create locked down container]
+      F --> G[Build archive with source and input]
+      G --> H[Copy archive into sandbox]
+      H --> I[Start container]
+      I --> J{Finished before timeout}
+      J -- Yes --> K[Read exit status]
+      J -- No --> L[Kill container and mark timeout]
+      K --> M[Collect logs]
+      L --> M
+      M --> N[Truncate large output]
+      N --> O[Remove container and close client]
+      O --> P[Return result]
+        </pre>
+      </section>
+
+      <section>
+        <h2>7) Key Functions and Their Basic Job</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>File</th>
+              <th>Function / Object</th>
+              <th>What It Does (Simple)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>main.py</td>
+              <td>root()</td>
+              <td>Returns base service message.</td>
+            </tr>
+            <tr>
+              <td>main.py</td>
+              <td>health()</td>
+              <td>Simple health check endpoint.</td>
+            </tr>
+            <tr>
+              <td>main.py</td>
+              <td>submit_execution(request)</td>
+              <td>Queues job and returns task ID immediately.</td>
+            </tr>
+            <tr>
+              <td>main.py</td>
+              <td>get_result(task_id)</td>
+              <td>Reads Celery task state/result and returns status.</td>
+            </tr>
+            <tr>
+              <td>main.py</td>
+              <td>execute_and_wait(request)</td>
+              <td>Queues job and waits for quick completion.</td>
+            </tr>
+            <tr>
+              <td>schemas.py</td>
+              <td>ExecuteRequest</td>
+              <td>Validates input fields and limits.</td>
+            </tr>
+            <tr>
+              <td>schemas.py</td>
+              <td>validate_language(value)</td>
+              <td>Normalizes language and blocks unsupported values.</td>
+            </tr>
+            <tr>
+              <td>schemas.py</td>
+              <td>ExecutionResult / TaskResultResponse</td>
+              <td>Defines output format returned to clients.</td>
+            </tr>
+            <tr>
+              <td>celery_app.py</td>
+              <td>celery_app = Celery(...)</td>
+              <td>Creates Celery app using Redis broker/backend.</td>
+            </tr>
+            <tr>
+              <td>tasks.py</td>
+              <td>run_code_task(payload)</td>
+              <td>Celery task wrapper that calls executor.</td>
+            </tr>
+            <tr>
+              <td>executor.py</td>
+              <td>normalize_language(language)</td>
+              <td>Maps alias like js to javascript.</td>
+            </tr>
+            <tr>
+              <td>executor.py</td>
+              <td>_build_archive(source, code, stdin)</td>
+              <td>Packs source file and stdin into tar bytes.</td>
+            </tr>
+            <tr>
+              <td>executor.py</td>
+              <td>_collect_logs(container)</td>
+              <td>Reads stdout and stderr from container.</td>
+            </tr>
+            <tr>
+              <td>executor.py</td>
+              <td>_truncate_output(text)</td>
+              <td>Limits output size to avoid huge responses.</td>
+            </tr>
+            <tr>
+              <td>executor.py</td>
+              <td>execute_code(...)</td>
+              <td>Full sandbox run pipeline and final result creation.</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section>
+        <h2>8) Environment and Runtime Dependencies</h2>
+        <div class="grid">
+          <div class="card">
+            <strong>Python Dependencies</strong><br />fastapi, uvicorn,
+            celery[redis], docker SDK
+          </div>
+          <div class="card">
+            <strong>Infra Services</strong><br />Redis container, API container,
+            Worker container
+          </div>
+          <div class="card">
+            <strong>Sandbox Image Tools</strong><br />Python3, Node.js, Java
+            JDK, GCC/G++
+          </div>
+          <div class="card">
+            <strong>Host Requirement</strong><br />Docker Engine must be running
+          </div>
+        </div>
+        <p class="note">
+          Note: API and Worker containers mount the Docker socket so Worker can
+          create sandbox containers dynamically.
+        </p>
+      </section>
+
+      <section>
+        <h2>9) How To Use This Guide</h2>
+        <p>
+          Open this file in a browser. Mermaid diagrams will render
+          automatically via CDN script. You can use this guide for onboarding,
+          architecture reviews, and explaining the backend to new team members.
+        </p>
+      </section>
+    </main>
+
+    <script type="module">
+      import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";
+      mermaid.initialize({
+        startOnLoad: true,
+        theme: "neutral",
+        flowchart: { curve: "basis" },
+      });
+    </script>
+  </body>
+</html>
