@@ -2,7 +2,10 @@ from __future__ import annotations
 
 import io
 import os
+import subprocess
+import sys
 import tarfile
+import tempfile
 import time
 from typing import Any
 
@@ -14,8 +17,12 @@ MAX_OUTPUT_CHARS = 20_000
 DEFAULT_SANDBOX_IMAGE = "codezen-sandbox:latest"
 SANDBOX_IMAGE = os.getenv("SANDBOX_IMAGE", DEFAULT_SANDBOX_IMAGE)
 
+
+class DockerUnavailable(RuntimeError):
+    pass
+
 LANGUAGE_ALIASES = {"js": "javascript"}
-LANGUAGE_CONFIG: dict[str, dict[str, str]] = {
+DOCKER_LANGUAGE_CONFIG: dict[str, dict[str, str]] = {
     "python": {
         "image": SANDBOX_IMAGE,
         "source_file": "main.py",
@@ -40,6 +47,36 @@ LANGUAGE_CONFIG: dict[str, dict[str, str]] = {
         "image": SANDBOX_IMAGE,
         "source_file": "main.cpp",
         "command": "g++ main.cpp -O2 -std=c++17 -o main && ./main < stdin.txt",
+    },
+}
+
+
+def _shell_command(command: str) -> list[str]:
+    if os.name == "nt":
+        return ["cmd", "/c", command]
+    return ["sh", "-lc", command]
+
+
+LOCAL_LANGUAGE_CONFIG: dict[str, dict[str, Any]] = {
+    "python": {
+        "source_file": "main.py",
+        "command": [sys.executable, "main.py"],
+    },
+    "javascript": {
+        "source_file": "main.js",
+        "command": ["node", "main.js"],
+    },
+    "java": {
+        "source_file": "Main.java",
+        "command": _shell_command("javac Main.java && java Main"),
+    },
+    "c": {
+        "source_file": "main.c",
+        "command": _shell_command("gcc main.c -O2 -std=c11 -o main && ./main"),
+    },
+    "cpp": {
+        "source_file": "main.cpp",
+        "command": _shell_command("g++ main.cpp -O2 -std=c++17 -o main && ./main"),
     },
 }
 
@@ -88,18 +125,82 @@ def _collect_logs(container: docker.models.containers.Container) -> tuple[str, s
     return "".join(stdout_parts), "".join(stderr_parts)
 
 
-def execute_code(
-    language: str,
+def _execute_local(
+    normalized_language: str,
     code: str,
     stdin: str,
-    timeout_seconds: int = 5,
+    timeout_seconds: int,
 ) -> dict[str, Any]:
-    normalized_language = normalize_language(language)
-    if normalized_language not in LANGUAGE_CONFIG:
-        supported = ", ".join(sorted(LANGUAGE_CONFIG))
-        raise ValueError(f"Unsupported language '{language}'. Supported values: {supported}.")
+    if normalized_language not in LOCAL_LANGUAGE_CONFIG:
+        supported = ", ".join(sorted(LOCAL_LANGUAGE_CONFIG))
+        raise ValueError(
+            f"Unsupported language '{normalized_language}'. Supported values: {supported}."
+        )
 
-    config = LANGUAGE_CONFIG[normalized_language]
+    config = LOCAL_LANGUAGE_CONFIG[normalized_language]
+    start_time = time.perf_counter()
+    timed_out = False
+    status_code = 1
+    stdout = ""
+    stderr = ""
+
+    try:
+        with tempfile.TemporaryDirectory() as workdir:
+            source_path = os.path.join(workdir, config["source_file"])
+            with open(source_path, "w", encoding="utf-8") as handle:
+                handle.write(code)
+
+            try:
+                completed = subprocess.run(
+                    config["command"],
+                    cwd=workdir,
+                    input=stdin,
+                    capture_output=True,
+                    text=True,
+                    timeout=timeout_seconds,
+                )
+                stdout = completed.stdout
+                stderr = completed.stderr
+                status_code = completed.returncode
+            except subprocess.TimeoutExpired as exc:
+                timed_out = True
+                status_code = 124
+                stdout = exc.stdout or ""
+                stderr = exc.stderr or ""
+    except FileNotFoundError as exc:
+        stderr = f"Local execution error: {exc}"
+        status_code = 127
+    except Exception as exc:
+        stderr = f"Local execution error: {exc}"
+        status_code = 1
+
+    if timed_out:
+        timeout_message = f"Execution timed out after {timeout_seconds} seconds."
+        stderr = f"{stderr}\n{timeout_message}".strip()
+
+    duration_ms = int((time.perf_counter() - start_time) * 1000)
+    return {
+        "stdout": _truncate_output(stdout),
+        "stderr": _truncate_output(stderr),
+        "exit_code": status_code,
+        "timed_out": timed_out,
+        "duration_ms": duration_ms,
+    }
+
+
+def _execute_docker(
+    normalized_language: str,
+    code: str,
+    stdin: str,
+    timeout_seconds: int,
+) -> dict[str, Any]:
+    if normalized_language not in DOCKER_LANGUAGE_CONFIG:
+        supported = ", ".join(sorted(DOCKER_LANGUAGE_CONFIG))
+        raise ValueError(
+            f"Unsupported language '{normalized_language}'. Supported values: {supported}."
+        )
+
+    config = DOCKER_LANGUAGE_CONFIG[normalized_language]
     sandbox_image = config["image"]
 
     start_time = time.perf_counter()
@@ -112,7 +213,12 @@ def execute_code(
     stderr = ""
 
     try:
-        client = docker.from_env()
+        try:
+            client = docker.from_env()
+            client.ping()
+        except (DockerException, FileNotFoundError) as exc:
+            raise DockerUnavailable(str(exc)) from exc
+
         container = client.containers.create(
             image=sandbox_image,
             command=["sh", "-lc", config["command"]],
@@ -143,8 +249,13 @@ def execute_code(
             container.kill()
 
         stdout, stderr = _collect_logs(container)
+    except DockerUnavailable:
+        raise
     except (APIError, DockerException, RuntimeError) as exc:
-        stderr = f"Docker sandbox error: {exc}"
+        stderr = (
+            "Docker sandbox error: "
+            f"{exc}\nSet EXECUTION_BACKEND=local to run without Docker."
+        )
         status_code = 1
     finally:
         if container is not None:
@@ -167,3 +278,41 @@ def execute_code(
         "timed_out": timed_out,
         "duration_ms": duration_ms,
     }
+
+
+def execute_code(
+    language: str,
+    code: str,
+    stdin: str,
+    timeout_seconds: int = 5,
+) -> dict[str, Any]:
+    normalized_language = normalize_language(language)
+    backend = os.getenv("EXECUTION_BACKEND", "local").strip().lower()
+    if backend == "local":
+        return _execute_local(
+            normalized_language,
+            code,
+            stdin,
+            timeout_seconds,
+        )
+    if backend != "docker":
+        raise ValueError(
+            "Unsupported EXECUTION_BACKEND. Use 'docker' or 'local'."
+        )
+    try:
+        return _execute_docker(
+            normalized_language,
+            code,
+            stdin,
+            timeout_seconds,
+        )
+    except DockerUnavailable:
+        fallback = os.getenv("EXECUTION_DOCKER_FALLBACK", "local").strip().lower()
+        if fallback == "local":
+            return _execute_local(
+                normalized_language,
+                code,
+                stdin,
+                timeout_seconds,
+            )
+        raise
